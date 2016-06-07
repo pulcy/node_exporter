@@ -26,3 +26,5 @@ dependencies-stamp
 /.deps
 /.release
 /.tarballs
+
+.gobuild
