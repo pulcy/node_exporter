@@ -33,6 +33,7 @@ const (
 type dockerCollector struct {
 	containerCpuUsageDesc    *prometheus.Desc
 	containerMemoryUsageDesc *prometheus.Desc
+	containerCountDesc       *prometheus.Desc
 	api                      *client.Client
 }
 
@@ -57,6 +58,10 @@ func NewDockerCollector() (Collector, error) {
 			prometheus.BuildFQName(dockerNamespace, "", "mem_usage"),
 			"Docker container memory usage", []string{"name"}, nil,
 		),
+		containerCountDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(dockerNamespace, "", "container_count"),
+			"Docker #containers", nil, nil,
+		),
 	}, nil
 }
 
@@ -77,6 +82,9 @@ func (c *dockerCollector) Update(ch chan<- prometheus.Metric) (err error) {
 		}(cnt)
 	}
 	wg.Wait()
+
+	ch <- prometheus.MustNewConstMetric(
+		c.containerCountDesc, prometheus.GaugeValue, float64(len(containers)))
 
 	return nil
 }
