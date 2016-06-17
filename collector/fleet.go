@@ -29,8 +29,9 @@ const (
 )
 
 type fleetCollector struct {
-	metric []prometheus.Gauge
-	api    client.API
+	metric              []prometheus.Gauge
+	unitFailedStateDesc *prometheus.Desc
+	api                 client.API
 }
 
 func init() {
@@ -51,6 +52,10 @@ func NewFleetCollector() (Collector, error) {
 
 	return &fleetCollector{
 		api: api,
+		unitFailedStateDesc: prometheus.NewDesc(
+			prometheus.BuildFQName(fleetNamespace, "", "unit_failed_state"),
+			"Fleet failed unit state", []string{"name"}, nil,
+		),
 		metric: []prometheus.Gauge{
 			prometheus.NewGauge(prometheus.GaugeOpts{
 				Namespace: fleetNamespace,
@@ -99,11 +104,13 @@ func (c *fleetCollector) Update(ch chan<- prometheus.Metric) (err error) {
 	stopping := 0
 
 	for _, s := range states {
+		stateValue := 0.0
 		switch s.SystemdActiveState {
 		case "inactive":
 			down++
 		case "failed":
 			failed++
+			stateValue = 1.0
 		case "activating":
 			starting++
 		case "deactivating":
@@ -119,6 +126,10 @@ func (c *fleetCollector) Update(ch chan<- prometheus.Metric) (err error) {
 				running++
 			}
 		}
+
+		ch <- prometheus.MustNewConstMetric(
+			c.unitFailedStateDesc, prometheus.GaugeValue, stateValue,
+			s.Name)
 	}
 
 	machines, err := c.api.Machines()
