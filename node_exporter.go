@@ -28,6 +28,7 @@ import (
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
 	"github.com/prometheus/node_exporter/collector"
+	"github.com/pulcy/go-terminate"
 )
 
 const (
@@ -131,6 +132,10 @@ func main() {
 		fmt.Fprintln(os.Stdout, version.Print("node_exporter"))
 		os.Exit(0)
 	}
+
+	// Listen for signals for proper termination behavior
+	t := terminate.NewTerminator(log.Infof, nil)
+	go t.ListenSignals()
 
 	log.Infoln("Starting node_exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
